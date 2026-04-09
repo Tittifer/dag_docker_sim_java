@@ -2,6 +2,15 @@
 
 这是把原始 `D:\dag_docker_sim` 原型项目重构为 Java 之后，再进一步改成的 Spring Boot 接口版本。
 
+## 标准 Maven 结构
+
+- `src/main/java`
+  Java 主源码目录
+- `src/test/java`
+  测试源码目录
+- `pom.xml`
+  Maven 构建配置
+
 ## 当前能力
 
 - 保留了核心 DAG 账本逻辑
@@ -12,15 +21,15 @@
 
 ## 主要目录
 
-- `src/App.java`
+- `src/main/java/App.java`
   Spring Boot 启动入口，同时保留 `--self-check` 自检模式
-- `src/com/dagdockersim/ledger`
+- `src/main/java/com/dagdockersim/ledger`
   DAG 账本核心实现
-- `src/com/dagdockersim/bootstrap`
+- `src/main/java/com/dagdockersim/bootstrap`
   初始预置数据和账本灌入逻辑
-- `src/com/dagdockersim/service`
+- `src/main/java/com/dagdockersim/service`
   `cloud`、`fusion`、`device` 的内存协作实现
-- `src/com/dagdockersim/api`
+- `src/main/java/com/dagdockersim/api`
   Spring Boot 控制器和运行时编排服务
 
 ## 运行环境
@@ -33,7 +42,7 @@
 首次启动 Spring Boot 需要 Maven 拉取依赖：
 
 ```powershell
-mvn spring-boot:run
+mvn -s maven-settings.xml spring-boot:run
 ```
 
 默认启动后访问：
@@ -47,7 +56,7 @@ http://localhost:8080/api/health
 如果你想先跑账本行为验证：
 
 ```powershell
-mvn -q -DskipTests compile
+mvn -s maven-settings.xml -q -DskipTests compile
 java -cp target/classes App --self-check
 ```
 
@@ -150,7 +159,7 @@ GET /api/devices
 1. 启动应用
 
 ```powershell
-mvn spring-boot:run
+mvn -s maven-settings.xml spring-boot:run
 ```
 
 2. 注册设备

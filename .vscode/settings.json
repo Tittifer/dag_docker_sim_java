@@ -1,7 +1,4 @@
 {
-    "java.project.sourcePaths": ["src"],
-    "java.project.outputPath": "bin",
-    "java.project.referencedLibraries": [
-        "lib/**/*.jar"
-    ]
+    "java.import.maven.enabled": true,
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
