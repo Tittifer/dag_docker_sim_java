@@ -32,6 +32,10 @@ public class DeviceSimulator {
         return new DeviceSimulator(deviceName, BootstrapEnvironment.bootstrapDeviceId(deviceName), keys.getPrivateKey(), keys.getPublicKey());
     }
 
+    public static DeviceSimulator restore(String deviceName, String deviceId, String signPrivkey, String signPubkey) {
+        return new DeviceSimulator(deviceName, deviceId, signPrivkey, signPubkey);
+    }
+
     public Transaction registerAt(FusionTerminal terminal) {
         return terminal.registerDevice(deviceId, signPubkey);
     }
@@ -56,6 +60,10 @@ public class DeviceSimulator {
 
     public String getSignPubkey() {
         return signPubkey;
+    }
+
+    public String getSignPrivkey() {
+        return signPrivkey;
     }
 }
 

@@ -170,7 +170,7 @@ public class DagLedger {
         if ("genesis".equals(tx.getTxType())) {
             return GLOBAL_GENESIS_IDS.contains(tx.getTxId());
         }
-        if ("business".equals(tx.getTxType()) && "soft_deleted".equals(tx.getStatus())) {
+        if ("business".equals(tx.getTxType()) && "soft_deleted".equals(tx.getStatus()) && tx.getTombstone() != null) {
             Map<String, Object> tombstone = tx.getTombstone();
             return tombstone != null
                 && Objects.equals(tombstone.get("tx_hash"), tx.getTxId())
@@ -1028,10 +1028,6 @@ public class DagLedger {
         return txIndex;
     }
 
-    public Map<String, Integer> getWeightIndex() {
-        return weightIndex;
-    }
-
     public Map<String, String> getDeviceRegistry() {
         return deviceRegistry;
     }
@@ -1040,16 +1036,8 @@ public class DagLedger {
         return tipSet;
     }
 
-    public ReentrantLock getLock() {
-        return lock;
-    }
-
     public String getTerminalId() {
         return terminalId;
-    }
-
-    public String getTerminalSignPrivkeyForTesting() {
-        return terminalSignPrivkey;
     }
 
     private void initGenesis() {

@@ -1,18 +1,13 @@
 package com.dagdockersim;
 
-import com.dagdockersim.support.LedgerSelfCheck;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
-import java.util.Arrays;
-
+@EnableCaching
 @SpringBootApplication(scanBasePackages = "com.dagdockersim")
 public class App {
     public static void main(String[] args) {
-        if (args.length > 0 && "--self-check".equals(args[0])) {
-            LedgerSelfCheck.main(Arrays.copyOfRange(args, 1, args.length));
-            return;
-        }
         SpringApplication.run(App.class, args);
     }
 }

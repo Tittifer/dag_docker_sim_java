@@ -2,7 +2,8 @@ package com.dagdockersim.simulation.api;
 
 import com.dagdockersim.simulation.api.dto.DeviceRegisterRequest;
 import com.dagdockersim.simulation.api.dto.TelemetrySubmitRequest;
-import com.dagdockersim.simulation.application.SimulationRuntimeService;
+import com.dagdockersim.simulation.application.command.SimulationCommandService;
+import com.dagdockersim.simulation.application.query.SimulationQueryService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,40 +20,45 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class SimulationController {
-    private final SimulationRuntimeService runtimeService;
+    private final SimulationQueryService queryService;
+    private final SimulationCommandService commandService;
 
-    public SimulationController(SimulationRuntimeService runtimeService) {
-        this.runtimeService = runtimeService;
+    public SimulationController(
+        SimulationQueryService queryService,
+        SimulationCommandService commandService
+    ) {
+        this.queryService = queryService;
+        this.commandService = commandService;
     }
 
     @GetMapping("/health")
     public Map<String, Object> health() {
-        return runtimeService.health();
+        return queryService.health();
     }
 
     @GetMapping("/topology")
     public Map<String, Object> topology() {
-        return runtimeService.topology();
+        return queryService.topology();
     }
 
     @GetMapping("/cloud/ledger")
     public Map<String, Object> cloudLedger() {
-        return runtimeService.cloudLedger();
+        return queryService.cloudLedger();
     }
 
     @GetMapping("/fusions")
     public List<Map<String, Object>> fusions() {
-        return runtimeService.listFusions();
+        return queryService.listFusions();
     }
 
     @GetMapping("/fusions/{terminalId}/ledger")
     public Map<String, Object> fusionLedger(@PathVariable String terminalId) {
-        return runtimeService.fusionLedger(terminalId);
+        return queryService.fusionLedger(terminalId);
     }
 
     @GetMapping("/devices")
     public List<Map<String, Object>> devices() {
-        return runtimeService.listDevices();
+        return queryService.listDevices();
     }
 
     @PostMapping("/fusions/{terminalId}/devices/register")
@@ -60,7 +66,7 @@ public class SimulationController {
         @PathVariable String terminalId,
         @Valid @RequestBody DeviceRegisterRequest request
     ) {
-        return runtimeService.registerDevice(terminalId, request);
+        return commandService.registerDevice(terminalId, request);
     }
 
     @PostMapping("/fusions/{terminalId}/devices/{deviceId}/telemetry")
@@ -70,7 +76,7 @@ public class SimulationController {
         @RequestBody(required = false) TelemetrySubmitRequest request
     ) {
         TelemetrySubmitRequest actualRequest = request == null ? new TelemetrySubmitRequest() : request;
-        return runtimeService.submitTelemetry(terminalId, deviceId, actualRequest);
+        return commandService.submitTelemetry(terminalId, deviceId, actualRequest);
     }
 }
 

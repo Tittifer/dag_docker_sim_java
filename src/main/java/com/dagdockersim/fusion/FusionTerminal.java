@@ -19,6 +19,10 @@ public class FusionTerminal {
     private final DagLedger ledger;
 
     public FusionTerminal(String terminalId, CloudStation cloudStation) {
+        this(terminalId, cloudStation, true);
+    }
+
+    public FusionTerminal(String terminalId, CloudStation cloudStation, boolean seedBootstrap) {
         this.terminalId = terminalId;
         this.cloudStation = cloudStation;
         KeyPairStrings signer = CryptoUtils.generateSecp256k1KeyPair();
@@ -36,7 +40,9 @@ public class FusionTerminal {
             1.25,
             Long.valueOf(7L)
         );
-        BootstrapEnvironment.seedBootstrapLedger(ledger, "fusion");
+        if (seedBootstrap) {
+            BootstrapEnvironment.seedBootstrapLedger(ledger, "fusion");
+        }
     }
 
     public Transaction registerDevice(String deviceId, String devicePubkey) {
@@ -116,14 +122,6 @@ public class FusionTerminal {
 
     public String getTerminalId() {
         return terminalId;
-    }
-
-    public String getSignPrivkey() {
-        return signPrivkey;
-    }
-
-    public String getSignPubkey() {
-        return signPubkey;
     }
 
     public DagLedger getLedger() {
