@@ -3,16 +3,23 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Run Spring Boot App",
+            "name": "App",
             "request": "launch",
             "mainClass": "App",
             "projectName": "dag-docker-sim-java"
         },
         {
             "type": "java",
+            "name": "Run Spring Boot App",
+            "request": "launch",
+            "mainClass": "com.dagdockersim.App",
+            "projectName": "dag-docker-sim-java"
+        },
+        {
+            "type": "java",
             "name": "Run Ledger Self Check",
             "request": "launch",
-            "mainClass": "App",
+            "mainClass": "com.dagdockersim.App",
             "projectName": "dag-docker-sim-java",
             "args": "--self-check"
         }

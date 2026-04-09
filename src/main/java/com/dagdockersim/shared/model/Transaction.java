@@ -1,6 +1,6 @@
-package com.dagdockersim.model;
+package com.dagdockersim.shared.model;
 
-import com.dagdockersim.util.JsonCanonicalizer;
+import com.dagdockersim.shared.util.JsonCanonicalizer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -264,3 +264,4 @@ public class Transaction {
         this.hardPrunedAt = hardPrunedAt;
     }
 }
+

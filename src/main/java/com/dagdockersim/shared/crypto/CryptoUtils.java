@@ -1,6 +1,6 @@
-package com.dagdockersim.crypto;
+package com.dagdockersim.shared.crypto;
 
-import com.dagdockersim.util.JsonCanonicalizer;
+import com.dagdockersim.shared.util.JsonCanonicalizer;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -132,3 +132,4 @@ public final class CryptoUtils {
         return builder.toString();
     }
 }
+

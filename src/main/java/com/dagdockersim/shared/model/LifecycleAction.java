@@ -1,4 +1,4 @@
-package com.dagdockersim.model;
+package com.dagdockersim.shared.model;
 
 public class LifecycleAction {
     private final String action;
@@ -22,3 +22,4 @@ public class LifecycleAction {
         return "{action=" + action + ", tx_id=" + txId + "}";
     }
 }
+

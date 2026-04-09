@@ -1,7 +1,8 @@
-package com.dagdockersim.api;
+package com.dagdockersim.simulation.api;
 
-import com.dagdockersim.api.dto.DeviceRegisterRequest;
-import com.dagdockersim.api.dto.TelemetrySubmitRequest;
+import com.dagdockersim.simulation.api.dto.DeviceRegisterRequest;
+import com.dagdockersim.simulation.api.dto.TelemetrySubmitRequest;
+import com.dagdockersim.simulation.application.SimulationRuntimeService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,3 +73,4 @@ public class SimulationController {
         return runtimeService.submitTelemetry(terminalId, deviceId, actualRequest);
     }
 }
+

@@ -1,4 +1,4 @@
-package com.dagdockersim.api.dto;
+package com.dagdockersim.simulation.api.dto;
 
 import java.util.Map;
 
@@ -13,3 +13,4 @@ public class TelemetrySubmitRequest {
         this.dataPayload = dataPayload;
     }
 }
+

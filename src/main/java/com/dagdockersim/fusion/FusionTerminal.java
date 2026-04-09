@@ -1,11 +1,12 @@
-package com.dagdockersim.service;
+package com.dagdockersim.fusion;
 
-import com.dagdockersim.bootstrap.BootstrapEnvironment;
-import com.dagdockersim.crypto.CryptoUtils;
-import com.dagdockersim.crypto.KeyPairStrings;
-import com.dagdockersim.ledger.DagLedger;
-import com.dagdockersim.model.LifecycleAction;
-import com.dagdockersim.model.Transaction;
+import com.dagdockersim.cloud.CloudStation;
+import com.dagdockersim.shared.bootstrap.BootstrapEnvironment;
+import com.dagdockersim.shared.crypto.CryptoUtils;
+import com.dagdockersim.shared.crypto.KeyPairStrings;
+import com.dagdockersim.shared.ledger.DagLedger;
+import com.dagdockersim.shared.model.LifecycleAction;
+import com.dagdockersim.shared.model.Transaction;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -129,3 +130,5 @@ public class FusionTerminal {
         return ledger;
     }
 }
+
+

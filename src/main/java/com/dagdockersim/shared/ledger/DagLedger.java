@@ -1,9 +1,9 @@
-package com.dagdockersim.ledger;
+package com.dagdockersim.shared.ledger;
 
-import com.dagdockersim.crypto.CryptoUtils;
-import com.dagdockersim.model.LifecycleAction;
-import com.dagdockersim.model.Transaction;
-import com.dagdockersim.util.JsonCanonicalizer;
+import com.dagdockersim.shared.crypto.CryptoUtils;
+import com.dagdockersim.shared.model.LifecycleAction;
+import com.dagdockersim.shared.model.Transaction;
+import com.dagdockersim.shared.util.JsonCanonicalizer;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -1256,3 +1256,4 @@ public class DagLedger {
         }
     }
 }
+

@@ -1,9 +1,9 @@
-package com.dagdockersim.bootstrap;
+package com.dagdockersim.shared.bootstrap;
 
-import com.dagdockersim.crypto.CryptoUtils;
-import com.dagdockersim.crypto.KeyPairStrings;
-import com.dagdockersim.ledger.DagLedger;
-import com.dagdockersim.model.Transaction;
+import com.dagdockersim.shared.crypto.CryptoUtils;
+import com.dagdockersim.shared.crypto.KeyPairStrings;
+import com.dagdockersim.shared.ledger.DagLedger;
+import com.dagdockersim.shared.model.Transaction;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -190,3 +190,4 @@ public final class BootstrapEnvironment {
         return list;
     }
 }
+

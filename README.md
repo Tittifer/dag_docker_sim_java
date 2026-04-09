@@ -1,36 +1,57 @@
 # DAG Docker Sim Java 接口版
 
-这是把原始 `D:\dag_docker_sim` 原型项目重构为 Java 之后，再进一步改成的 Spring Boot 接口版本。
+这是把原始 `D:\dag_docker_sim` 原型项目重构为 Java 后，再整理成 Spring Boot 接口版的工程。
 
-## 标准 Maven 结构
+## 当前结构
+
+项目现在按“微服务边界 + 共享模块”的方式组织，但仍保持为单个 Maven 工程，方便本地调试和后续逐步拆分。
+
+- `com.dagdockersim`
+  应用启动入口
+- `com.dagdockersim.cloud`
+  云端节点相关代码
+- `com.dagdockersim.fusion`
+  融合终端相关代码
+- `com.dagdockersim.device`
+  设备模拟相关代码
+- `com.dagdockersim.simulation`
+  当前单进程编排层与 REST 接口
+- `com.dagdockersim.shared`
+  各模块共享的账本、模型、加密、bootstrap、工具
+- `com.dagdockersim.support`
+  自检和辅助代码
+
+## 标准 Maven 目录
 
 - `src/main/java`
-  Java 主源码目录
+  主源码目录
 - `src/test/java`
   测试源码目录
 - `pom.xml`
   Maven 构建配置
 
-## 当前能力
+## 主要代码位置
 
-- 保留了核心 DAG 账本逻辑
-- 保留了创世节点和 bootstrap 预置设备
-- 保留了注册交易、业务交易、权重累计、确认、软删除、硬删除语义
-- 提供了 Spring Boot REST 接口
-- 提供了一个自检入口，用来校验关键账本行为
-
-## 主要目录
-
-- `src/main/java/App.java`
-  Spring Boot 启动入口，同时保留 `--self-check` 自检模式
-- `src/main/java/com/dagdockersim/ledger`
-  DAG 账本核心实现
-- `src/main/java/com/dagdockersim/bootstrap`
-  初始预置数据和账本灌入逻辑
-- `src/main/java/com/dagdockersim/service`
-  `cloud`、`fusion`、`device` 的内存协作实现
-- `src/main/java/com/dagdockersim/api`
-  Spring Boot 控制器和运行时编排服务
+- `src/main/java/com/dagdockersim/App.java`
+  Spring Boot 启动入口，保留 `--self-check`
+- `src/main/java/com/dagdockersim/cloud`
+  云端节点
+- `src/main/java/com/dagdockersim/fusion`
+  融合终端
+- `src/main/java/com/dagdockersim/device`
+  设备模拟
+- `src/main/java/com/dagdockersim/simulation/api`
+  REST 控制器
+- `src/main/java/com/dagdockersim/simulation/application`
+  编排服务
+- `src/main/java/com/dagdockersim/shared/ledger`
+  DAG 账本核心
+- `src/main/java/com/dagdockersim/shared/model`
+  交易模型
+- `src/main/java/com/dagdockersim/shared/bootstrap`
+  预置环境与种子数据
+- `src/main/java/com/dagdockersim/support/LedgerSelfCheck.java`
+  行为自检
 
 ## 运行环境
 
@@ -39,13 +60,13 @@
 
 ## 启动方式
 
-首次启动 Spring Boot 需要 Maven 拉取依赖：
+首次启动会通过 Maven 下载依赖：
 
 ```powershell
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-默认启动后访问：
+启动后默认访问：
 
 ```text
 http://localhost:8080/api/health
@@ -53,52 +74,44 @@ http://localhost:8080/api/health
 
 ## 自检
 
-如果你想先跑账本行为验证：
-
 ```powershell
 mvn -s maven-settings.xml -q -DskipTests compile
-java -cp target/classes App --self-check
+& 'D:\JDK11\bin\java.exe' -cp 'D:\Java_study\dag_docker_sim_java\dag_docker_sim_java\target\classes' com.dagdockersim.App --self-check
 ```
 
 ## 主要接口
 
-### 1. 查看服务健康状态
+### 查看服务状态
 
 ```http
 GET /api/health
 ```
 
-### 2. 查看整体拓扑摘要
+### 查看整体拓扑
 
 ```http
 GET /api/topology
 ```
 
-### 3. 查看云端账本
+### 查看云端账本
 
 ```http
 GET /api/cloud/ledger
 ```
 
-### 4. 查看所有融合终端
+### 查看融合终端列表
 
 ```http
 GET /api/fusions
 ```
 
-### 5. 查看某个融合终端账本
+### 查看某个融合终端账本
 
 ```http
 GET /api/fusions/{terminalId}/ledger
 ```
 
-例如：
-
-```http
-GET /api/fusions/fusion1/ledger
-```
-
-### 6. 注册一个模拟设备
+### 注册模拟设备
 
 ```http
 POST /api/fusions/{terminalId}/devices/register
@@ -115,13 +128,7 @@ Content-Type: application/json
 }
 ```
 
-说明：
-
-- `deviceName`：设备名称
-- `useBootstrapIdentity`：是否使用预置身份
-- `autoConfirm`：是否在注册后立即做一次云端确认并同步到各 fusion
-
-### 7. 提交设备遥测数据
+### 提交设备遥测数据
 
 ```http
 POST /api/fusions/{terminalId}/devices/{deviceId}/telemetry
@@ -146,46 +153,14 @@ Content-Type: application/json
 }
 ```
 
-如果请求体为空，系统会自动生成一份默认遥测数据。
-
-### 8. 查看当前已注册的模拟设备
+### 查看当前模拟设备
 
 ```http
 GET /api/devices
 ```
 
-## 一个最小调用流程
-
-1. 启动应用
-
-```powershell
-mvn -s maven-settings.xml spring-boot:run
-```
-
-2. 注册设备
-
-```powershell
-curl -X POST "http://localhost:8080/api/fusions/fusion1/devices/register" `
-  -H "Content-Type: application/json" `
-  -d "{\"deviceName\":\"device41\",\"useBootstrapIdentity\":false,\"autoConfirm\":true}"
-```
-
-3. 查看设备列表，拿到 `deviceId`
-
-```powershell
-curl "http://localhost:8080/api/devices"
-```
-
-4. 提交业务数据
-
-```powershell
-curl -X POST "http://localhost:8080/api/fusions/fusion1/devices/{deviceId}/telemetry" `
-  -H "Content-Type: application/json" `
-  -d "{\"dataPayload\":{\"sequence\":1,\"device_name\":\"device41\",\"metrics\":{\"voltage_v\":228.4,\"current_a\":16.2,\"temperature_c\":33.8,\"active_power_kw\":3.701}}}"
-```
-
 ## 说明
 
-- 当前版本是单进程内存版 Spring Boot 接口服务，不是多容器部署版
-- 原 Python 项目的 FastAPI、Docker Compose、绘图导出、实验脚本还没有继续迁移到 Java
-- 现在这版更适合先做接口联调、逻辑验证和后续二次开发
+- 当前是单进程内存版 Spring Boot 接口服务
+- 包结构已经按微服务角色边界拆分，后续再做多模块或多服务拆分会更自然
+- 原 Python 项目的 Docker Compose、绘图导出、实验脚本暂未继续迁移

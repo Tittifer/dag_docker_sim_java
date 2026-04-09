@@ -1,10 +1,10 @@
-package com.dagdockersim.demo;
+package com.dagdockersim.support;
 
-import com.dagdockersim.crypto.CryptoUtils;
-import com.dagdockersim.crypto.KeyPairStrings;
-import com.dagdockersim.ledger.DagLedger;
-import com.dagdockersim.model.LifecycleAction;
-import com.dagdockersim.model.Transaction;
+import com.dagdockersim.shared.crypto.CryptoUtils;
+import com.dagdockersim.shared.crypto.KeyPairStrings;
+import com.dagdockersim.shared.ledger.DagLedger;
+import com.dagdockersim.shared.model.LifecycleAction;
+import com.dagdockersim.shared.model.Transaction;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -248,3 +248,4 @@ public final class LedgerSelfCheck {
         }
     }
 }
+

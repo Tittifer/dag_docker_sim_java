@@ -1,4 +1,4 @@
-package com.dagdockersim.crypto;
+package com.dagdockersim.shared.crypto;
 
 public class KeyPairStrings {
     private final String privateKey;
@@ -17,3 +17,4 @@ public class KeyPairStrings {
         return publicKey;
     }
 }
+

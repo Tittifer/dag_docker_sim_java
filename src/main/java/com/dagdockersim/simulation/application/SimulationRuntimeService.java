@@ -1,12 +1,12 @@
-package com.dagdockersim.api;
+package com.dagdockersim.simulation.application;
 
-import com.dagdockersim.api.dto.DeviceRegisterRequest;
-import com.dagdockersim.api.dto.TelemetrySubmitRequest;
-import com.dagdockersim.model.LifecycleAction;
-import com.dagdockersim.model.Transaction;
-import com.dagdockersim.service.CloudStation;
-import com.dagdockersim.service.DeviceSimulator;
-import com.dagdockersim.service.FusionTerminal;
+import com.dagdockersim.simulation.api.dto.DeviceRegisterRequest;
+import com.dagdockersim.simulation.api.dto.TelemetrySubmitRequest;
+import com.dagdockersim.shared.model.LifecycleAction;
+import com.dagdockersim.shared.model.Transaction;
+import com.dagdockersim.cloud.CloudStation;
+import com.dagdockersim.device.DeviceSimulator;
+import com.dagdockersim.fusion.FusionTerminal;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -260,3 +260,5 @@ public class SimulationRuntimeService {
         }
     }
 }
+
+

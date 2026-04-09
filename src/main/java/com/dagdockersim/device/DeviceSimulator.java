@@ -1,9 +1,10 @@
-package com.dagdockersim.service;
+package com.dagdockersim.device;
 
-import com.dagdockersim.bootstrap.BootstrapEnvironment;
-import com.dagdockersim.crypto.CryptoUtils;
-import com.dagdockersim.crypto.KeyPairStrings;
-import com.dagdockersim.model.Transaction;
+import com.dagdockersim.fusion.FusionTerminal;
+import com.dagdockersim.shared.bootstrap.BootstrapEnvironment;
+import com.dagdockersim.shared.crypto.CryptoUtils;
+import com.dagdockersim.shared.crypto.KeyPairStrings;
+import com.dagdockersim.shared.model.Transaction;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,3 +58,5 @@ public class DeviceSimulator {
         return signPubkey;
     }
 }
+
+

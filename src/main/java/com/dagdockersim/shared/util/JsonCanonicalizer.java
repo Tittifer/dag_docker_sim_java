@@ -1,4 +1,4 @@
-package com.dagdockersim.util;
+package com.dagdockersim.shared.util;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -151,3 +151,4 @@ public final class JsonCanonicalizer {
         builder.append('"');
     }
 }
+

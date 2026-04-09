@@ -1,4 +1,6 @@
-import com.dagdockersim.demo.LedgerSelfCheck;
+package com.dagdockersim;
+
+import com.dagdockersim.support.LedgerSelfCheck;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -14,3 +16,5 @@ public class App {
         SpringApplication.run(App.class, args);
     }
 }
+
+

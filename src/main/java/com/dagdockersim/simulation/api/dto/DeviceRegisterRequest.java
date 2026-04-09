@@ -1,4 +1,4 @@
-package com.dagdockersim.api.dto;
+package com.dagdockersim.simulation.api.dto;
 
 import javax.validation.constraints.NotBlank;
 
@@ -33,3 +33,4 @@ public class DeviceRegisterRequest {
         this.autoConfirm = autoConfirm;
     }
 }
+
