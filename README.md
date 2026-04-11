@@ -1,12 +1,24 @@
-# DAG Docker Sim Java 接口版
+# DAG Docker Sim Java
 
-这是将原始 DAG 仿真项目重构为 Java Spring Boot 接口版后的实现。当前版本已经完成：
+这是一个基于 Spring Boot 的 DAG 账本仿真后端项目。当前版本已经参考 `D:\yupao\yupao-backend-master` 的工程风格，整理为更常见的后端分层目录：
 
-- 使用 MySQL 持久化账本和设备会话
-- 使用 Redis 缓存高频查询接口
-- 按接口层、应用层、运行时上下文、基础设施层重新整理目录
+- `config`
+- `common`
+- `constant`
+- `controller`
+- `core`
+- `exception`
+- `mapper`
+- `model`
+- `service`
+- `utils`
 
-项目目前仍是单体 Spring Boot 工程，但代码组织已经按微服务拆分思路进行模块化，便于后续继续拆成独立服务。
+项目能力保持不变，仍然支持：
+
+- MySQL 持久化账本数据与设备会话
+- Redis 缓存高频查询接口
+- 云端节点、融合终端、设备模拟器协同运行
+- DAG 交易确认、软删除、硬删除等核心逻辑
 
 ## 技术栈
 
@@ -20,91 +32,113 @@
 
 ## 目录结构
 
-### 顶层模块
+### 顶层目录
 
 - `com.dagdockersim`
-  应用启动入口
-- `com.dagdockersim.cloud`
-  云端节点逻辑
-- `com.dagdockersim.fusion`
-  融合终端逻辑
-- `com.dagdockersim.device`
-  设备模拟器
-- `com.dagdockersim.shared`
-  公共账本、模型、加密、bootstrap、工具类
-- `com.dagdockersim.simulation`
-  仿真接口与运行时编排
-
-### simulation 模块细分
-
-- `simulation.api`
+  Spring Boot 启动入口
+- `com.dagdockersim.config`
+  项目配置
+- `com.dagdockersim.common`
+  通用返回体与响应工具
+- `com.dagdockersim.constant`
+  常量定义
+- `com.dagdockersim.controller`
   REST 控制器
-- `simulation.api.dto`
-  请求 DTO
-- `simulation.application.command`
-  写操作服务，负责注册设备、提交遥测、缓存失效
-- `simulation.application.query`
-  读操作服务，负责健康检查、拓扑、账本查询、设备查询
-- `simulation.application.runtime`
-  运行时上下文，负责维护 cloud、fusion、device session 的内存态协作与启动恢复
-- `simulation.infrastructure.cache`
-  Redis 缓存配置与缓存名称常量
-- `simulation.infrastructure.persistence.ledger`
-  账本持久化适配层
-- `simulation.infrastructure.persistence.session`
-  设备会话持久化适配层
+- `com.dagdockersim.core`
+  DAG 仿真核心领域代码
+- `com.dagdockersim.exception`
+  全局异常处理
+- `com.dagdockersim.mapper`
+  持久化访问接口
+- `com.dagdockersim.model`
+  请求对象、领域对象、数据库实体
+- `com.dagdockersim.service`
+  Service 接口
+- `com.dagdockersim.service.impl`
+  Service 实现与运行时协作逻辑
+- `com.dagdockersim.utils`
+  工具类
 
-## 当前模块职责
+### core 模块
 
-### 1. 接口层
+- `core.bootstrap`
+  预置设备与创世数据
+- `core.cloud`
+  云端节点逻辑
+- `core.crypto`
+  加密与签名工具
+- `core.device`
+  设备模拟器
+- `core.fusion`
+  融合终端逻辑
+- `core.ledger`
+  DAG 账本核心实现
 
-- [SimulationController.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/api/SimulationController.java)
-  只负责接收 HTTP 请求并转发给查询服务或命令服务
+### model 模块
 
-### 2. 应用层
+- `model.domain`
+  领域对象，例如交易、生命周期动作
+- `model.entity`
+  JPA 实体
+- `model.request`
+  接口请求体
+- `model.vo`
+  接口返回对象
 
-- [SimulationQueryService.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/application/query/SimulationQueryService.java)
-  负责读接口与 Redis 缓存
-- [SimulationCommandService.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/application/command/SimulationCommandService.java)
-  负责写接口与缓存失效
-- [SimulationRuntimeContext.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/application/runtime/SimulationRuntimeContext.java)
-  负责运行态装配、启动恢复、账本同步、设备会话恢复
+### service 模块
 
-### 3. 基础设施层
+- `service`
+  对外暴露的查询服务、命令服务接口
+- `service.impl`
+  具体实现
+- `service.impl.support`
+  运行时上下文、账本持久化适配、设备会话存取等内部支撑类
 
-- [RedisCacheConfig.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/infrastructure/cache/RedisCacheConfig.java)
-  Redis 缓存 TTL 和序列化策略
-- [SimulationCacheNames.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/infrastructure/cache/SimulationCacheNames.java)
-  缓存名称统一常量
-- [LedgerStateStore.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/infrastructure/persistence/ledger/LedgerStateStore.java)
+## 关键文件
+
+- [App.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/App.java)
+  应用启动入口
+- [BaseResponse.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/common/BaseResponse.java)
+  通用响应体
+- [GlobalExceptionHandler.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/exception/GlobalExceptionHandler.java)
+  全局异常处理
+- [SimulationController.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/controller/SimulationController.java)
+  接口入口
+- [SimulationQueryService.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/service/SimulationQueryService.java)
+  查询服务接口
+- [SimulationCommandService.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/service/SimulationCommandService.java)
+  命令服务接口
+- [SimulationRuntimeContext.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/service/impl/SimulationRuntimeContext.java)
+  运行时状态装配与恢复
+- [DagLedger.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/core/ledger/DagLedger.java)
+  DAG 账本核心
+- [RedisCacheConfig.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/config/RedisCacheConfig.java)
+  Redis 缓存配置
+- [LedgerStateStore.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/service/impl/support/LedgerStateStore.java)
   MySQL 账本快照读写
-- [TransactionPersistenceMapper.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/infrastructure/persistence/ledger/TransactionPersistenceMapper.java)
-  Transaction 与数据库实体之间的转换
-- [DeviceSessionStore.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/simulation/infrastructure/persistence/session/DeviceSessionStore.java)
+- [DeviceSessionStore.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/service/impl/support/DeviceSessionStore.java)
   设备会话读写
+- [HealthVO.java](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/java/com/dagdockersim/model/vo/HealthVO.java)
+  健康检查返回对象
 
-## 持久化与缓存设计
+## MySQL 与 Redis 的职责
 
-### MySQL 中保存的内容
+### MySQL
 
-- `ledger_transactions`
-  保存 `cloud`、`fusion1`、`fusion2`、`fusion3` 的账本快照
-- `device_sessions`
-  保存已注册设备的运行会话，便于应用重启后继续提交遥测
+- 保存 `ledger_transactions`
+- 保存 `device_sessions`
+- 应用重启后从数据库恢复账本与设备会话
 
-### Redis 中缓存的内容
+### Redis
 
-- `/api/health`
-- `/api/topology`
-- `/api/cloud/ledger`
-- `/api/fusions`
-- `/api/fusions/{terminalId}/ledger`
-- `/api/devices`
+- 缓存 `/api/health`
+- 缓存 `/api/topology`
+- 缓存 `/api/cloud/ledger`
+- 缓存 `/api/fusions`
+- 缓存 `/api/fusions/{terminalId}/ledger`
+- 缓存 `/api/devices`
 
-写接口执行后会自动：
-
-- 刷新 MySQL 中的账本快照
-- 清理相关 Redis 缓存
+写接口执行后会自动清理相关缓存。
 
 ## 启动前准备
 
@@ -126,13 +160,13 @@ COLLATE utf8mb4_unicode_ci;
 
 ### 2. 准备 Redis
 
-默认连接：
+默认 Redis 地址：
 
 - `localhost:6379`
 
 ### 3. 环境变量
 
-默认配置位于 [application.yml](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/resources/application.yml)，也可以通过环境变量覆盖：
+默认配置位于 [application.yml](/d:/Java_study/dag_docker_sim_java/dag_docker_sim_java/src/main/resources/application.yml)，可通过环境变量覆盖：
 
 ```powershell
 $env:MYSQL_URL="jdbc:mysql://localhost:3306/dag_docker_sim?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8"
@@ -149,7 +183,7 @@ $env:REDIS_PASSWORD=""
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-启动后默认访问：
+默认访问：
 
 ```text
 http://localhost:8080/api/health
@@ -157,52 +191,22 @@ http://localhost:8080/api/health
 
 ## 编译
 
-执行：
-
 ```powershell
 mvn -s maven-settings.xml -q -DskipTests compile
 ```
 
 ## 主要接口
 
-### 健康检查
+- `GET /api/health`
+- `GET /api/topology`
+- `GET /api/cloud/ledger`
+- `GET /api/fusions`
+- `GET /api/fusions/{terminalId}/ledger`
+- `GET /api/devices`
+- `POST /api/fusions/{terminalId}/devices/register`
+- `POST /api/fusions/{terminalId}/devices/{deviceId}/telemetry`
 
-```http
-GET /api/health
-```
-
-### 查看整体拓扑
-
-```http
-GET /api/topology
-```
-
-### 查看云端账本
-
-```http
-GET /api/cloud/ledger
-```
-
-### 查看融合终端列表
-
-```http
-GET /api/fusions
-```
-
-### 查看某个融合终端账本
-
-```http
-GET /api/fusions/{terminalId}/ledger
-```
-
-### 注册设备
-
-```http
-POST /api/fusions/{terminalId}/devices/register
-Content-Type: application/json
-```
-
-请求示例：
+注册设备请求示例：
 
 ```json
 {
@@ -212,14 +216,7 @@ Content-Type: application/json
 }
 ```
 
-### 提交遥测数据
-
-```http
-POST /api/fusions/{terminalId}/devices/{deviceId}/telemetry
-Content-Type: application/json
-```
-
-请求示例：
+提交遥测请求示例：
 
 ```json
 {
@@ -237,21 +234,9 @@ Content-Type: application/json
 }
 ```
 
-### 查看当前模拟设备
+## 本次整理结果
 
-```http
-GET /api/devices
-```
-
-## 本次重构收益
-
-- 读写职责分离，接口层更薄
-- 运行时状态集中到 `runtime`，启动恢复逻辑更清晰
-- MySQL 和 Redis 配置收敛到 `infrastructure`，目录可读性更强
-- 持久化代码按 `ledger` 和 `session` 分开，后续扩展更自然
-
-## 当前边界
-
-- 目前仍是单进程 Spring Boot 应用，不是真正分布式部署
-- 账本写入仍采用整终端快照覆盖方式，优先保证实现简单和可维护
-- 暂未引入消息队列、分布式锁、统一鉴权和监控体系
+- 目录结构更接近常规 Spring Boot 后端脚手架
+- controller、service、model、config、mapper 的职责更清晰
+- DAG 相关代码统一收敛到 `core`
+- 便于继续扩展接口、异常处理、通用响应体等标准后端模块
