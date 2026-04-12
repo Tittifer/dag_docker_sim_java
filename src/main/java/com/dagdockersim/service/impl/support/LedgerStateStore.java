@@ -39,10 +39,12 @@ public class LedgerStateStore {
     @Transactional
     public void replaceLedger(String terminalId, Collection<Transaction> transactions) {
         ledgerTransactionRepository.deleteByTerminalId(terminalId);
+        ledgerTransactionRepository.flush();
         List<LedgerTransactionEntity> entities = new ArrayList<LedgerTransactionEntity>();
         for (Transaction transaction : transactions) {
             entities.add(transactionPersistenceMapper.toEntity(terminalId, transaction));
         }
         ledgerTransactionRepository.saveAll(entities);
+        ledgerTransactionRepository.flush();
     }
 }

@@ -1,0 +1,7 @@
+index,success,terminal_id,device_name,device_id,duration_ms,message
+1,true,fusion1,sim-device-0001,8824bd1fcb9152622abb,219,ok
+2,true,fusion2,sim-device-0002,1959d21c8ac7ed4ef4b4,219,ok
+3,true,fusion3,sim-device-0003,41010d34fce0eb6e0ba0,219,ok
+4,true,fusion1,sim-device-0004,4b8e13e91a58483b1336,40,ok
+5,true,fusion2,sim-device-0005,423ef61ea7826b9b0506,39,ok
+6,true,fusion3,sim-device-0006,841ee844fa068da18b14,39,ok

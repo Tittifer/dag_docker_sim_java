@@ -7,17 +7,22 @@ import com.dagdockersim.model.domain.LifecycleAction;
 import com.dagdockersim.model.domain.Transaction;
 import com.dagdockersim.model.request.DeviceRegisterRequest;
 import com.dagdockersim.model.request.TelemetrySubmitRequest;
+import com.dagdockersim.service.impl.support.AsyncLedgerPersistenceCoordinator;
 import com.dagdockersim.service.impl.support.DeviceSessionStore;
 import com.dagdockersim.service.impl.support.LedgerStateStore;
+import com.dagdockersim.service.impl.support.TerminalTaskDispatcher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SimulationRuntimeContext {
@@ -26,29 +31,32 @@ public class SimulationRuntimeContext {
     private final boolean cloudSnapshotRestored;
     private final LedgerStateStore ledgerStateStore;
     private final DeviceSessionStore deviceSessionStore;
+    private final AsyncLedgerPersistenceCoordinator ledgerPersistenceCoordinator;
     private final CloudStation cloud;
     private final Map<String, FusionTerminal> fusions;
-    private final Map<String, DeviceSession> deviceSessions = new LinkedHashMap<String, DeviceSession>();
+    private final Map<String, DeviceSession> deviceSessions = new ConcurrentHashMap<String, DeviceSession>();
+    private final TerminalTaskDispatcher taskDispatcher;
 
-    public SimulationRuntimeContext(LedgerStateStore ledgerStateStore, DeviceSessionStore deviceSessionStore) {
+    public SimulationRuntimeContext(
+        LedgerStateStore ledgerStateStore,
+        DeviceSessionStore deviceSessionStore,
+        AsyncLedgerPersistenceCoordinator ledgerPersistenceCoordinator
+    ) {
         this.ledgerStateStore = ledgerStateStore;
         this.deviceSessionStore = deviceSessionStore;
+        this.ledgerPersistenceCoordinator = ledgerPersistenceCoordinator;
 
         this.cloudSnapshotRestored = ledgerStateStore.hasTerminalSnapshot(CLOUD_TERMINAL_ID);
-        CloudStation initializedCloud = new CloudStation(30, 5, true, !cloudSnapshotRestored);
-        FusionTerminal fusion1 = new FusionTerminal("fusion1", initializedCloud, !cloudSnapshotRestored);
-        FusionTerminal fusion2 = new FusionTerminal("fusion2", initializedCloud, !cloudSnapshotRestored);
-        FusionTerminal fusion3 = new FusionTerminal("fusion3", initializedCloud, !cloudSnapshotRestored);
+        this.cloud = new CloudStation(30, 5, true, !cloudSnapshotRestored);
+        FusionTerminal fusion1 = new FusionTerminal("fusion1", !cloudSnapshotRestored);
+        FusionTerminal fusion2 = new FusionTerminal("fusion2", !cloudSnapshotRestored);
+        FusionTerminal fusion3 = new FusionTerminal("fusion3", !cloudSnapshotRestored);
 
-        initializedCloud.attachFusion(fusion1);
-        initializedCloud.attachFusion(fusion2);
-        initializedCloud.attachFusion(fusion3);
-
-        this.cloud = initializedCloud;
         this.fusions = new LinkedHashMap<String, FusionTerminal>();
         this.fusions.put(fusion1.getTerminalId(), fusion1);
         this.fusions.put(fusion2.getTerminalId(), fusion2);
         this.fusions.put(fusion3.getTerminalId(), fusion3);
+        this.taskDispatcher = new TerminalTaskDispatcher(terminalIds());
 
         if (cloudSnapshotRestored) {
             restoreLedger(CLOUD_TERMINAL_ID, cloud);
@@ -57,72 +65,71 @@ public class SimulationRuntimeContext {
             }
             restoreDeviceSessions();
         } else {
-            syncAllLedgers();
+            syncInitialLedgers();
         }
     }
 
-    public synchronized Map<String, Object> health() {
+    public Map<String, Object> health() {
         Map<String, Object> response = new LinkedHashMap<String, Object>();
         response.put("service", "dag-docker-sim-java");
         response.put("mode", "spring-boot-rest");
         response.put("storage", storageSummary());
-        response.put("cloud", cloud.getLedger().summary());
+        response.put("cloud", cloudSummary());
         response.put("fusions", fusionSummaries());
         response.put("simulated_device_count", Integer.valueOf(deviceSessions.size()));
         return response;
     }
 
-    public synchronized Map<String, Object> topology() {
+    public Map<String, Object> topology() {
         Map<String, Object> response = new LinkedHashMap<String, Object>();
         response.put("storage", storageSummary());
-        response.put("cloud", cloud.getLedger().summary());
+        response.put("cloud", cloudSummary());
         response.put("fusions", fusionSummaries());
         response.put("devices", listDevices());
         return response;
     }
 
-    public synchronized Map<String, Object> cloudLedger() {
-        Map<String, Object> response = new LinkedHashMap<String, Object>();
-        response.put("summary", cloud.getLedger().summary());
-        response.put("transactions", transactionsOf(cloud.getLedger().getTxIndex().values()));
-        response.put("archive_size", Integer.valueOf(cloud.getArchive().size()));
-        response.put("storage", storageSummary());
-        return response;
+    public Map<String, Object> cloudLedger() {
+        return taskDispatcher.call(CLOUD_TERMINAL_ID, () -> {
+            Map<String, Object> response = new LinkedHashMap<String, Object>();
+            response.put("summary", cloud.getLedger().summary());
+            response.put("transactions", transactionsOf(cloud.getLedger().getTxIndex().values()));
+            response.put("archive_size", Integer.valueOf(cloud.getArchive().size()));
+            response.put("storage", storageSummary());
+            return response;
+        });
     }
 
-    public synchronized List<Map<String, Object>> listFusions() {
+    public List<Map<String, Object>> listFusions() {
         List<Map<String, Object>> items = new ArrayList<Map<String, Object>>();
         for (FusionTerminal fusion : fusions.values()) {
-            Map<String, Object> item = new LinkedHashMap<String, Object>();
-            item.put("terminal_id", fusion.getTerminalId());
-            item.put("summary", fusion.getLedger().summary());
-            items.add(item);
+            items.add(taskDispatcher.call(fusion.getTerminalId(), () -> fusionSummary(fusion)));
         }
         return items;
     }
 
-    public synchronized Map<String, Object> fusionLedger(String terminalId) {
+    public Map<String, Object> fusionLedger(String terminalId) {
         FusionTerminal fusion = requireFusion(terminalId);
-        Map<String, Object> response = new LinkedHashMap<String, Object>();
-        response.put("terminal_id", terminalId);
-        response.put("summary", fusion.getLedger().summary());
-        response.put("transactions", transactionsOf(fusion.getLedger().getTxIndex().values()));
-        response.put("storage", storageSummary());
-        return response;
+        return taskDispatcher.call(terminalId, () -> {
+            Map<String, Object> response = new LinkedHashMap<String, Object>();
+            response.put("terminal_id", terminalId);
+            response.put("summary", fusion.getLedger().summary());
+            response.put("transactions", transactionsOf(fusion.getLedger().getTxIndex().values()));
+            response.put("storage", storageSummary());
+            return response;
+        });
     }
 
-    public synchronized Map<String, Object> registerDevice(String terminalId, DeviceRegisterRequest request) {
+    public Map<String, Object> registerDevice(String terminalId, DeviceRegisterRequest request) {
         FusionTerminal fusion = requireFusion(terminalId);
         DeviceSimulator simulator = Boolean.TRUE.equals(request.getUseBootstrapIdentity())
             ? DeviceSimulator.newBootstrap(request.getDeviceName())
             : DeviceSimulator.newDynamic(request.getDeviceName());
 
-        Transaction registerTx;
-        try {
-            registerTx = simulator.registerAt(fusion);
-        } catch (IllegalStateException exception) {
-            throw mapDomainError(exception);
-        }
+        Transaction registerTx = taskDispatcher.call(terminalId, () -> fusion.registerDevice(
+            simulator.getDeviceId(),
+            simulator.getSignPubkey()
+        ));
 
         DeviceSession session = new DeviceSession(
             simulator,
@@ -132,11 +139,13 @@ public class SimulationRuntimeContext {
         deviceSessions.put(simulator.getDeviceId(), session);
         deviceSessionStore.save(session.toSnapshot());
 
+        broadcastToCloudAndPeers(registerTx);
+
         if (Boolean.TRUE.equals(request.getAutoConfirm())) {
             confirmRegister(registerTx.getTxId());
         }
 
-        syncAllLedgers();
+        persistAllLedgers();
 
         Map<String, Object> response = new LinkedHashMap<String, Object>();
         response.put("accepted", Boolean.TRUE);
@@ -144,13 +153,13 @@ public class SimulationRuntimeContext {
         response.put("device_id", simulator.getDeviceId());
         response.put("terminal_id", terminalId);
         response.put("register_tx", registerTx.toMap());
-        response.put("cloud_summary", cloud.getLedger().summary());
-        response.put("fusion_summary", fusion.getLedger().summary());
+        response.put("cloud_summary", cloudSummary());
+        response.put("fusion_summary", taskDispatcher.call(terminalId, () -> fusion.getLedger().summary()));
         response.put("storage", storageSummary());
         return response;
     }
 
-    public synchronized Map<String, Object> submitTelemetry(String terminalId, String deviceId, TelemetrySubmitRequest request) {
+    public Map<String, Object> submitTelemetry(String terminalId, String deviceId, TelemetrySubmitRequest request) {
         FusionTerminal fusion = requireFusion(terminalId);
         DeviceSession session = requireDevice(deviceId);
         if (!terminalId.equals(session.getTerminalId())) {
@@ -171,46 +180,97 @@ public class SimulationRuntimeContext {
             payload.put("metrics", defaultMetrics());
         }
 
-        Transaction businessTx;
-        try {
-            businessTx = session.getSimulator().submitTelemetry(fusion, payload);
-        } catch (IllegalStateException exception) {
-            throw mapDomainError(exception);
-        }
+        Transaction businessTx = taskDispatcher.call(terminalId, () -> session.getSimulator().submitTelemetry(fusion, payload));
 
-        syncAllLedgers();
+        broadcastToCloudAndPeers(businessTx);
+        persistAllLedgers();
 
         Map<String, Object> response = new LinkedHashMap<String, Object>();
         response.put("accepted", Boolean.TRUE);
         response.put("device_id", deviceId);
         response.put("terminal_id", terminalId);
         response.put("business_tx", businessTx.toMap());
-        response.put("cloud_summary", cloud.getLedger().summary());
-        response.put("fusion_summary", fusion.getLedger().summary());
+        response.put("cloud_summary", cloudSummary());
+        response.put("fusion_summary", taskDispatcher.call(terminalId, () -> fusion.getLedger().summary()));
         response.put("storage", storageSummary());
         return response;
     }
 
-    public synchronized List<Map<String, Object>> listDevices() {
+    public List<Map<String, Object>> listDevices() {
         List<Map<String, Object>> items = new ArrayList<Map<String, Object>>();
-        for (Map.Entry<String, DeviceSession> entry : deviceSessions.entrySet()) {
+        List<String> deviceIds = new ArrayList<String>(deviceSessions.keySet());
+        Collections.sort(deviceIds);
+        for (String deviceId : deviceIds) {
+            DeviceSession session = deviceSessions.get(deviceId);
+            if (session == null) {
+                continue;
+            }
             Map<String, Object> item = new LinkedHashMap<String, Object>();
-            item.put("device_id", entry.getKey());
-            item.put("device_name", entry.getValue().getSimulator().getDeviceName());
-            item.put("terminal_id", entry.getValue().getTerminalId());
-            item.put("sign_pubkey", entry.getValue().getSimulator().getSignPubkey());
-            item.put("bootstrap_identity", Boolean.valueOf(entry.getValue().isBootstrapIdentity()));
+            item.put("device_id", deviceId);
+            item.put("device_name", session.getSimulator().getDeviceName());
+            item.put("terminal_id", session.getTerminalId());
+            item.put("sign_pubkey", session.getSimulator().getSignPubkey());
+            item.put("bootstrap_identity", Boolean.valueOf(session.isBootstrapIdentity()));
             items.add(item);
         }
         return items;
     }
 
-    private void confirmRegister(String txId) {
-        cloud.getLedger().confirmRegister(txId);
-        LifecycleAction confirmAction = new LifecycleAction("confirm_register", txId);
-        for (FusionTerminal fusion : fusions.values()) {
-            fusion.applyConfirmation(confirmAction);
+    @PreDestroy
+    public void destroy() {
+        if (taskDispatcher != null) {
+            taskDispatcher.shutdown();
         }
+    }
+
+    private void broadcastToCloudAndPeers(Transaction transaction) {
+        CloudStation.CloudBroadcastOutcome outcome = taskDispatcher.call(
+            CLOUD_TERMINAL_ID,
+            () -> cloud.receiveBroadcast(transaction.copy())
+        );
+
+        for (FusionTerminal fusion : fusions.values()) {
+            if (fusion.getTerminalId().equals(transaction.getSourceTerminalId())) {
+                continue;
+            }
+            taskDispatcher.run(fusion.getTerminalId(), () -> fusion.receiveBroadcast(transaction.copy()));
+        }
+
+        if (!outcome.getActions().isEmpty()) {
+            applyActionsToFusions(outcome.getActions());
+        }
+    }
+
+    private void confirmRegister(String txId) {
+        taskDispatcher.call(CLOUD_TERMINAL_ID, () -> {
+            cloud.getLedger().confirmRegister(txId);
+            return Boolean.TRUE;
+        });
+        applyActionsToFusions(Collections.singletonList(new LifecycleAction("confirm_register", txId)));
+    }
+
+    private void applyActionsToFusions(List<LifecycleAction> actions) {
+        for (LifecycleAction action : actions) {
+            for (FusionTerminal fusion : fusions.values()) {
+                taskDispatcher.run(fusion.getTerminalId(), () -> fusion.applyConfirmation(action));
+            }
+        }
+    }
+
+    private void persistAllLedgers() {
+        ledgerPersistenceCoordinator.persistLedgers(collectLedgerSnapshots());
+    }
+
+    private void syncInitialLedgers() {
+        ledgerPersistenceCoordinator.persistLedgersAndWait(collectLedgerSnapshots());
+    }
+
+    private List<Transaction> copyTransactions(Collection<Transaction> transactions) {
+        List<Transaction> copies = new ArrayList<Transaction>();
+        for (Transaction transaction : transactions) {
+            copies.add(transaction.copy());
+        }
+        return copies;
     }
 
     private void restoreLedger(String terminalId, CloudStation cloudStation) {
@@ -235,13 +295,6 @@ public class SimulationRuntimeContext {
         }
     }
 
-    private void syncAllLedgers() {
-        ledgerStateStore.replaceLedger(CLOUD_TERMINAL_ID, cloud.getLedger().getTxIndex().values());
-        for (FusionTerminal fusion : fusions.values()) {
-            ledgerStateStore.replaceLedger(fusion.getTerminalId(), fusion.getLedger().getTxIndex().values());
-        }
-    }
-
     private void restoreDeviceSessions() {
         for (DeviceSessionStore.DeviceSessionSnapshot snapshot : deviceSessionStore.loadAll()) {
             if (!fusions.containsKey(snapshot.getTerminalId())) {
@@ -263,10 +316,16 @@ public class SimulationRuntimeContext {
     private Map<String, Object> storageSummary() {
         Map<String, Object> storage = new LinkedHashMap<String, Object>();
         storage.put("ledger_persistence", "mysql");
+        storage.put("ledger_write_mode", "async_mysql_snapshot");
         storage.put("read_cache", "redis");
         storage.put("cloud_snapshot_restored", Boolean.valueOf(cloudSnapshotRestored));
         storage.put("restored_device_session_count", Integer.valueOf(deviceSessions.size()));
+        storage.put("async_persistence", ledgerPersistenceCoordinator.summary());
         return storage;
+    }
+
+    private Map<String, Object> cloudSummary() {
+        return taskDispatcher.call(CLOUD_TERMINAL_ID, () -> cloud.getLedger().summary());
     }
 
     private FusionTerminal requireFusion(String terminalId) {
@@ -285,32 +344,19 @@ public class SimulationRuntimeContext {
         return session;
     }
 
-    private ResponseStatusException mapDomainError(IllegalStateException exception) {
-        String message = exception.getMessage() == null ? "simulation_error" : exception.getMessage();
-        if ("duplicate_device_id".equals(message)) {
-            return new ResponseStatusException(HttpStatus.CONFLICT, message);
-        }
-        if ("device_not_registered".equals(message)) {
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, message);
-        }
-        if ("device_identity_not_confirmed".equals(message)) {
-            return new ResponseStatusException(HttpStatus.CONFLICT, message);
-        }
-        if ("device_signature_invalid".equals(message)) {
-            return new ResponseStatusException(HttpStatus.UNAUTHORIZED, message);
-        }
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
-    }
-
     private List<Map<String, Object>> fusionSummaries() {
         List<Map<String, Object>> items = new ArrayList<Map<String, Object>>();
         for (FusionTerminal fusion : fusions.values()) {
-            Map<String, Object> item = new LinkedHashMap<String, Object>();
-            item.put("terminal_id", fusion.getTerminalId());
-            item.put("summary", fusion.getLedger().summary());
-            items.add(item);
+            items.add(taskDispatcher.call(fusion.getTerminalId(), () -> fusionSummary(fusion)));
         }
         return items;
+    }
+
+    private Map<String, Object> fusionSummary(FusionTerminal fusion) {
+        Map<String, Object> item = new LinkedHashMap<String, Object>();
+        item.put("terminal_id", fusion.getTerminalId());
+        item.put("summary", fusion.getLedger().summary());
+        return item;
     }
 
     private List<Map<String, Object>> transactionsOf(Collection<Transaction> transactions) {
@@ -339,4 +385,29 @@ public class SimulationRuntimeContext {
         return metrics;
     }
 
+    private List<String> terminalIds() {
+        List<String> terminalIds = new ArrayList<String>();
+        terminalIds.add(CLOUD_TERMINAL_ID);
+        terminalIds.addAll(fusions.keySet());
+        return terminalIds;
+    }
+
+    private Map<String, List<Transaction>> collectLedgerSnapshots() {
+        Map<String, List<Transaction>> snapshots = new LinkedHashMap<String, List<Transaction>>();
+        snapshots.put(
+            CLOUD_TERMINAL_ID,
+            taskDispatcher.call(CLOUD_TERMINAL_ID, () -> copyTransactions(cloud.getLedger().getTxIndex().values()))
+        );
+        for (FusionTerminal fusion : fusions.values()) {
+            final FusionTerminal currentFusion = fusion;
+            snapshots.put(
+                currentFusion.getTerminalId(),
+                taskDispatcher.call(
+                    currentFusion.getTerminalId(),
+                    () -> copyTransactions(currentFusion.getLedger().getTxIndex().values())
+                )
+            );
+        }
+        return snapshots;
+    }
 }

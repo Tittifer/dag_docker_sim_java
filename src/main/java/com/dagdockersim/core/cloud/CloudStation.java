@@ -3,7 +3,6 @@ package com.dagdockersim.core.cloud;
 import com.dagdockersim.core.bootstrap.BootstrapEnvironment;
 import com.dagdockersim.core.crypto.CryptoUtils;
 import com.dagdockersim.core.crypto.KeyPairStrings;
-import com.dagdockersim.core.fusion.FusionTerminal;
 import com.dagdockersim.core.ledger.DagLedger;
 import com.dagdockersim.model.domain.LifecycleAction;
 import com.dagdockersim.model.domain.Transaction;
@@ -16,7 +15,6 @@ import java.util.Map;
 public class CloudStation {
     private final DagLedger ledger;
     private final Map<String, Map<String, Object>> archive = new LinkedHashMap<String, Map<String, Object>>();
-    private final List<FusionTerminal> attachedFusions = new ArrayList<FusionTerminal>();
 
     public CloudStation(int regConfirmThreshold, int dataConfirmThreshold, boolean preserveFullTransactions) {
         this(regConfirmThreshold, dataConfirmThreshold, preserveFullTransactions, true);
@@ -48,29 +46,14 @@ public class CloudStation {
         }
     }
 
-    public void attachFusion(FusionTerminal fusion) {
-        attachedFusions.add(fusion);
-    }
-
-    public void receiveBroadcast(Transaction tx) {
+    public CloudBroadcastOutcome receiveBroadcast(Transaction tx) {
         archive.put(tx.getTxId(), tx.toMap());
         DagLedger.InsertResult insertResult = ledger.insertTransactionWithCandidates(tx.copy());
-
-        for (FusionTerminal fusion : attachedFusions) {
-            if (!fusion.getTerminalId().equals(tx.getSourceTerminalId())) {
-                fusion.receiveBroadcast(tx.copy());
-            }
-        }
 
         List<LifecycleAction> actions = insertResult.isInserted()
             ? ledger.applyCloudLifecycle(insertResult.getCandidates())
             : new ArrayList<LifecycleAction>();
-
-        for (LifecycleAction action : actions) {
-            for (FusionTerminal fusion : attachedFusions) {
-                fusion.applyConfirmation(action);
-            }
-        }
+        return new CloudBroadcastOutcome(insertResult.isInserted(), actions);
     }
 
     public DagLedger getLedger() {
@@ -83,6 +66,24 @@ public class CloudStation {
 
     public void archiveTransaction(Transaction transaction) {
         archive.put(transaction.getTxId(), transaction.toMap());
+    }
+
+    public static class CloudBroadcastOutcome {
+        private final boolean inserted;
+        private final List<LifecycleAction> actions;
+
+        public CloudBroadcastOutcome(boolean inserted, List<LifecycleAction> actions) {
+            this.inserted = inserted;
+            this.actions = actions;
+        }
+
+        public boolean isInserted() {
+            return inserted;
+        }
+
+        public List<LifecycleAction> getActions() {
+            return actions;
+        }
     }
 }
 

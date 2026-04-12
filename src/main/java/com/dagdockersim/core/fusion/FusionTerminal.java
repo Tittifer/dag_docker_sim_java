@@ -1,7 +1,6 @@
 package com.dagdockersim.core.fusion;
 
 import com.dagdockersim.core.bootstrap.BootstrapEnvironment;
-import com.dagdockersim.core.cloud.CloudStation;
 import com.dagdockersim.core.crypto.CryptoUtils;
 import com.dagdockersim.core.crypto.KeyPairStrings;
 import com.dagdockersim.core.ledger.DagLedger;
@@ -13,18 +12,16 @@ import java.util.Map;
 
 public class FusionTerminal {
     private final String terminalId;
-    private final CloudStation cloudStation;
     private final String signPrivkey;
     private final String signPubkey;
     private final DagLedger ledger;
 
-    public FusionTerminal(String terminalId, CloudStation cloudStation) {
-        this(terminalId, cloudStation, true);
+    public FusionTerminal(String terminalId) {
+        this(terminalId, true);
     }
 
-    public FusionTerminal(String terminalId, CloudStation cloudStation, boolean seedBootstrap) {
+    public FusionTerminal(String terminalId, boolean seedBootstrap) {
         this.terminalId = terminalId;
-        this.cloudStation = cloudStation;
         KeyPairStrings signer = CryptoUtils.generateSecp256k1KeyPair();
         this.signPrivkey = signer.getPrivateKey();
         this.signPubkey = signer.getPublicKey();
@@ -53,7 +50,6 @@ public class FusionTerminal {
         if (!ledger.insertTransaction(tx)) {
             throw new IllegalStateException("local_insert_failed");
         }
-        cloudStation.receiveBroadcast(tx.copy());
         return tx;
     }
 
@@ -88,7 +84,6 @@ public class FusionTerminal {
         if (!ledger.insertTransaction(tx)) {
             throw new IllegalStateException("device_business_insert_failed");
         }
-        cloudStation.receiveBroadcast(tx.copy());
         return tx;
     }
 

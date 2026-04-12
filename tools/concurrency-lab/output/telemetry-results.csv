@@ -1,0 +1,13 @@
+success,terminal_id,device_id,device_name,sequence,duration_ms,message
+true,fusion1,8824bd1fcb9152622abb,sim-device-0001,1,39,ok
+true,fusion1,8824bd1fcb9152622abb,sim-device-0001,2,38,ok
+true,fusion2,1959d21c8ac7ed4ef4b4,sim-device-0002,3,39,ok
+true,fusion2,1959d21c8ac7ed4ef4b4,sim-device-0002,4,37,ok
+true,fusion3,41010d34fce0eb6e0ba0,sim-device-0003,5,37,ok
+true,fusion3,41010d34fce0eb6e0ba0,sim-device-0003,6,30,ok
+true,fusion1,4b8e13e91a58483b1336,sim-device-0004,7,51,ok
+true,fusion1,4b8e13e91a58483b1336,sim-device-0004,8,41,ok
+true,fusion2,423ef61ea7826b9b0506,sim-device-0005,9,41,ok
+true,fusion2,423ef61ea7826b9b0506,sim-device-0005,10,33,ok
+true,fusion3,841ee844fa068da18b14,sim-device-0006,11,33,ok
+true,fusion3,841ee844fa068da18b14,sim-device-0006,12,33,ok
